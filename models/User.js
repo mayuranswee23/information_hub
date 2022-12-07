@@ -1,8 +1,15 @@
 const { Model, DataTypes } = require('sequelize'); 
 const sequelize = require('../config/connection'); 
+const bcrypt = require('bcrypt');
 
 //create User model 
-class User extends Model{}
+class User extends Model{
+    //set up method to run on instance data (per user) to check password
+    checkPassword(loginPw){
+        return bcrypt.compareSync(loginPw, this.password);
+    }
+}
+
 
 //define tables columns and configuration 
 User.init(
@@ -11,7 +18,7 @@ User.init(
     //define ID colum
     id:{
         // use Sequalize DataTypes object to provide what type of data it is
-        types: DataTypes.INTEGER, 
+        type: DataTypes.INTEGER, 
         //MySQL NOT NULL equivalent
         allowNull: false, 
         //instruct that this is the primaryKey
@@ -41,11 +48,23 @@ User.init(
         allowNull: false, 
         validate:{
             //password must be atleast 6 characters long
-            lens: [6]
+            len: [6]
         }
     }
 }, 
 {
+    hooks:{
+    //set up beforeCreate lifecycle "hook" functionality
+    async beforeCreate(newUserData){
+        newUserData.password = await bcrypt.hash(newUserData.password, 10); 
+        return newUserData;         
+    },
+    //set up beforeUpdate lifecycle "hook" functionality
+    async beforeUpdate (updatedUserData){
+        updatedUserData.password = await bcrypt.hash(updatedUserData.password, 10);
+        return updatedUserData; 
+    }
+    },
     //Table configurations options
     //pass imported sequelize connection (direct connection to db)
     sequelize, 
@@ -57,6 +76,7 @@ User.init(
     underscored: true, 
     //name of the model
     modelName: 'user'
-});
+}
+);
 
 module.exports = User; 
